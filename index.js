@@ -3,6 +3,7 @@ const ethers = require('ethers');
 
 const chainId = ChainId.MAINNET;
 const tokenAddress = '0x6b175474e89094c44da98b954eedeac495271d0f'; // DAI
+const PRIVATE_KEY = '305378d1de2e37fe1100464afbc1acc9cfc91edf1a226e07544d6ebe2bfbc250';
 
 const init = async() => {
   const dai = await Fetcher.fetchTokenData(chainId, tokenAddress);
@@ -22,27 +23,32 @@ const init = async() => {
   const to = '';
   const deadline = Math.floor(Date.now() / 1000 ) + 60 * 20;
   const value = trade.inputAmount.raw;
+
+  const provider = ethers.getDefaultProvider('mainnet', {
+    infura: 'https://mainnet.infura.io/v3/ba14d1b3cfe5405088ee3c65ebd1d4db'
+  })
+  
+  const signer = new ethers.Wallet(PRIVATE_KEY);
+  const account = signer.connect(provider);
+  const uniswap = new ethers.Contract(
+    '0x7a250d5630B4cF539739dF2C5dAcb4c659F2488D',
+    ['function swapETHForExactTokens(uint amountOut, address[] calldata path, address to, uint deadline) external payable returns (uint[] memory amounts);'],
+    account
+  );
+  
+  const tx = await uniswap.sendExactETHForTokens(
+    ammountOutMin,
+    path,
+    to,
+    deadline,
+    { value, gasPrice: 20e9 }
+  );
+  console.log(`Transaction hash: ${tx.hash}`);
+  
+  const receipt = await tx.await();
+  console.log(`Transaction was mined in block ${receipt.blockNumber}`);
+  
 }
 
-const provider = ethers.getDefaultProvider('mainnet', {
-  infura: 'https://mainnet.infura.io/v3/ba14d1b3cfe5405088ee3c65ebd1d4db'
-})
-
-const signer = new ethers.Wallet(PRIVATE_KEY);
-const account = signer.connect(provider);
-const uniswap = new ethers.Contract(
-  '0x7a250d5630B4cF539739dF2C5dAcb4c659F2488D',
-  ['function swapETHForExactTokens(uint amountOut, address[] calldata path, address to, uint deadline) external payable returns (uint[] memory amounts);'],
-  account
-);
-
-const tx = await uniswap.sendExactETHForTokens(
-  ammountOutMin,
-  path,
-  to,
-  deadline,
-  { value, gasPrice: 20e9 }
-);
-console.log(`Transaction hash: ${tx.hash}`);
 
 init();
